@@ -765,9 +765,9 @@ class SDTrainer(BaseSDTrainProcess):
                 loss = stepped_loss(pred, batch.latents, noise, noisy_latents, timesteps, self.sd.noise_scheduler)
                 # the way this loss works, it is low, increase it to match predictable LR effects
                 loss = loss * 10.0
-            elif self.train_config.loss_type == "fft":
+            elif self.train_config.loss_type == "frft":
                 loss = frft_loss(pred, target, 1.0)
-            elif self.train_config.loss_type == "fft_rand":
+            elif self.train_config.loss_type == "frft_rand":
                 loss = frft_loss_rand(pred, target, 1.0)
             else:
                 loss = torch.nn.functional.mse_loss(pred.float(), target.float(), reduction="none")
