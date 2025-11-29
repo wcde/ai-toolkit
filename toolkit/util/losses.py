@@ -91,3 +91,24 @@ def stepped_loss(model_pred, latents, noise, noisy_latents, timesteps, scheduler
         latents.float().to(device=predicted_images.device),
         reduction="none",
     )
+    
+def frft_loss_rand(pred, target, alpha):
+    from torch_frft.dfrft_module import dfrft
+    
+    frft_pred = dfrft(pred.float(), alpha)
+    frft_target = dfrft(target.float(), alpha)
+    batch_size, channels, height, width = frft_pred.shape
+    mask = torch.ones(width, dtype=torch.float32, device=frft_pred.device)
+    mask = torch.randn_like(mask)
+    mask = mask.view(1, 1, 1, -1)
+    mask = mask.expand(batch_size, channels, height, width)
+    diff = (frft_pred - frft_target) * mask
+    return diff.real ** 2 + diff.imag ** 2
+
+def frft_loss(pred, target, alpha):
+    from torch_frft.dfrft_module import dfrft
+    
+    frft_pred = dfrft(pred.float(), alpha)
+    frft_target = dfrft(target.float(), alpha)
+    diff = frft_pred - frft_target 
+    return diff.real ** 2 + diff.imag ** 2

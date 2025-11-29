@@ -549,6 +549,8 @@ export default function SimpleJob({
                     { value: 'mae', label: 'Mean Absolute Error' },
                     { value: 'wavelet', label: 'Wavelet' },
                     { value: 'stepped', label: 'Stepped Recovery' },
+                    { value: 'frft', label: 'FRFT' },
+                    { value: 'frft_rand', label: 'FRFT Random' },
                   ]}
                 />
               </div>
