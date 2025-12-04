@@ -577,8 +577,16 @@ class ImageProcessingDTOMixin:
                     img = img.transpose(Image.FLIP_TOP_BOTTOM)
                 
                 # Apply bucketing
-                img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
+                img = img.resize((self.scale_to_width, self.scale_to_height), Image.LANCZOS)
+                img_aug = img.resize((int(self.scale_to_width / self.dataset_config.downscale), int(self.scale_to_height / self.dataset_config.downscale)), Image.BILINEAR)
+                img_aug = img_aug.resize((self.scale_to_width, self.scale_to_height), Image.BILINEAR)
                 img = img.crop((
+                    self.crop_x,
+                    self.crop_y,
+                    self.crop_x + self.crop_width,
+                    self.crop_y + self.crop_height
+                ))
+                img_aug = img_aug.crop((
                     self.crop_x,
                     self.crop_y,
                     self.crop_x + self.crop_width,
@@ -588,9 +596,10 @@ class ImageProcessingDTOMixin:
                 # Apply transform if provided
                 if transform:
                     img = transform(img)
+                    img_aug = transform(img_aug)
                 
                 frames.append(img)
-            
+                self.tensor_aug = img_aug
             # Release the video capture
             cap.release()
             
@@ -701,7 +710,7 @@ class ImageProcessingDTOMixin:
 
         if self.dataset_config.buckets:
             # scale and crop based on file item
-            img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
+            img = img.resize((self.scale_to_width, self.scale_to_height), Image.LANCZOS)
             # crop to x_crop, y_crop, x_crop + crop_width, y_crop + crop_height
             if img.width < self.crop_x + self.crop_width or img.height < self.crop_y + self.crop_height:
                 # todo look into this. This still happens sometimes
@@ -719,7 +728,7 @@ class ImageProcessingDTOMixin:
             # TODO this is nto right
             img = img.resize(
                 (int(img.size[0] * self.dataset_config.scale), int(img.size[1] * self.dataset_config.scale)),
-                Image.BICUBIC)
+                Image.LANCZOS)
             min_img_size = min(img.size)
             if self.dataset_config.random_crop:
                 if self.dataset_config.random_scale and min_img_size > self.dataset_config.resolution:
@@ -732,11 +741,11 @@ class ImageProcessingDTOMixin:
                     scaler = scale_size / min_img_size
                     scale_width = int((img.width + 5) * scaler)
                     scale_height = int((img.height + 5) * scaler)
-                    img = img.resize((scale_width, scale_height), Image.BICUBIC)
+                    img = img.resize((scale_width, scale_height), Image.LANCZOS)
                 img = transforms.RandomCrop(self.dataset_config.resolution)(img)
             else:
                 img = transforms.CenterCrop(min_img_size)(img)
-                img = img.resize((self.dataset_config.resolution, self.dataset_config.resolution), Image.BICUBIC)
+                img = img.resize((self.dataset_config.resolution, self.dataset_config.resolution), Image.LANCZOS)
 
         if self.augments is not None and len(self.augments) > 0:
             # do augmentations
@@ -748,9 +757,13 @@ class ImageProcessingDTOMixin:
             # augmentations handles transforms
             img = self.augment_image(img, transform=transform)
         elif transform:
+            img_aug = img.resize((int(img.size[0] / self.dataset_config.downscale), int(img.size[1] / self.dataset_config.downscale)), Image.BILINEAR)
+            img_aug = img_aug.resize(img.size, Image.BILINEAR)
+            img_aug = transform(img_aug)
             img = transform(img)
 
         self.tensor = img
+        self.tensor_aug = img_aug
         if not only_load_latents:
             if self.has_control_image:
                 self.load_control_image()
@@ -815,7 +828,7 @@ class InpaintControlFileItemDTOMixin:
 
             if self.dataset_config.buckets:
                 # scale and crop based on file item
-                img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
+                img = img.resize((self.scale_to_width, self.scale_to_height), Image.LANCZOS)
                 # img = transforms.CenterCrop((self.crop_height, self.crop_width))(img)
                 # crop
                 img = img.crop((
@@ -911,7 +924,7 @@ class ControlFileItemDTOMixin:
             if not self.full_size_control_images:
                 # we just scale them to 512x512:
                 w, h = img.size
-                img = img.resize((512, 512), Image.BICUBIC)
+                img = img.resize((512, 512), Image.LANCZOS)
 
             elif not self.use_raw_control_images:
                 w, h = img.size
@@ -924,7 +937,7 @@ class ControlFileItemDTOMixin:
 
                 if self.dataset_config.buckets:
                     # scale and crop based on file item
-                    img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
+                    img = img.resize((self.scale_to_width, self.scale_to_height), Image.LANCZOS)
                     # img = transforms.CenterCrop((self.crop_height, self.crop_width))(img)
                     # crop
                     img = img.crop((
@@ -1145,7 +1158,7 @@ class ClipImageFileItemDTOMixin:
             else:
                 # image must be square. If it is not, we will resize/squish it so it is, that way we don't crop out data
                 # resize to the smallest dimension
-                img = img.resize((min_size, min_size), Image.BICUBIC)
+                img = img.resize((min_size, min_size), Image.LANCZOS)
 
         if self.has_clip_augmentations:
             self.clip_image_tensor = self.augment_clip_image(img, transform=None)
@@ -1372,7 +1385,7 @@ class MaskFileItemDTOMixin:
 
         if self.dataset_config.buckets:
             # scale and crop based on file item
-            img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
+            img = img.resize((self.scale_to_width, self.scale_to_height), Image.LANCZOS)
             # img = transforms.CenterCrop((self.crop_height, self.crop_width))(img)
             # crop
             img = img.crop((
@@ -1447,7 +1460,7 @@ class UnconditionalFileItemDTOMixin:
 
         if self.dataset_config.buckets:
             # scale and crop based on file item
-            img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
+            img = img.resize((self.scale_to_width, self.scale_to_height), Image.LANCZOS)
             # img = transforms.CenterCrop((self.crop_height, self.crop_width))(img)
             # crop
             img = img.crop((
@@ -1635,6 +1648,7 @@ class LatentCachingFileItemDTOMixin:
         if hasattr(super(), '__init__'):
             super().__init__(*args, **kwargs)
         self._encoded_latent: Union[torch.Tensor, None] = None
+        self._encoded_latent_aug: Union[torch.Tensor, None] = None
         self._latent_path: Union[str, None] = None
         self.is_latent_cached = False
         self.is_caching_to_disk = False
@@ -1691,6 +1705,7 @@ class LatentCachingFileItemDTOMixin:
             else:
                 # move it back to cpu
                 self._encoded_latent = self._encoded_latent.to('cpu')
+                self._encoded_latent_aug = self._encoded_latent_aug.to('cpu')
 
     def get_latent(self, device=None):
         if not self.is_latent_cached:
@@ -1703,6 +1718,7 @@ class LatentCachingFileItemDTOMixin:
                 device='cpu'
             )
             self._encoded_latent = state_dict['latent']
+            self._encoded_latent_aug = state_dict['latent_aug']
         return self._encoded_latent
 
 
@@ -1758,6 +1774,7 @@ class LatentCachingMixin:
                         # load it into memory
                         state_dict = load_file(latent_path, device='cpu')
                         file_item._encoded_latent = state_dict['latent'].to('cpu', dtype=self.sd.torch_dtype)
+                        file_item._encoded_latent_aug = state_dict['latent_aug'].to('cpu', dtype=self.sd.torch_dtype)
                 else:
                     # not saved to disk, calculate
                     # load the image first
@@ -1768,6 +1785,8 @@ class LatentCachingMixin:
                     try:
                         imgs = file_item.tensor.unsqueeze(0).to(device, dtype=dtype)
                         latent = self.sd.encode_images(imgs).squeeze(0)
+                        imgs_aug = file_item.tensor_aug.unsqueeze(0).to(device, dtype=dtype)
+                        latent_aug = self.sd.encode_images(imgs_aug).squeeze(0)
                     except Exception as e:
                         print_acc(f"Error processing image: {file_item.path}")
                         print_acc(f"Error: {str(e)}")
@@ -1776,6 +1795,7 @@ class LatentCachingMixin:
                     if to_disk:
                         state_dict = OrderedDict([
                             ('latent', latent.clone().detach().cpu()),
+                            ('latent_aug', latent_aug.clone().detach().cpu()),
                         ])
                         # metadata
                         meta = get_meta_for_safetensors(file_item.get_latent_info_dict())

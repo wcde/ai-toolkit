@@ -57,6 +57,16 @@ def get_optimizer(
         print("Using FOCUS optimizer")
 
         optimizer = FOCUS(params, lr=learning_rate, **optimizer_params)
+    elif lower_type == "fira":
+        from pytorch_optimizer.optimizer import Fira
+        print("Using Fira optimizer")
+
+        optimizer = Fira(params, lr=learning_rate, **optimizer_params)
+    elif lower_type == "amos":
+        from pytorch_optimizer.optimizer import Amos
+        print("Using Amos optimizer")
+
+        optimizer = Amos(params, lr=learning_rate, **optimizer_params)
     elif lower_type == "adam8":
         from toolkit.optimizers.adam8bit import Adam8bit
 

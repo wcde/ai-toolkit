@@ -824,6 +824,7 @@ class DatasetConfig:
     def __init__(self, **kwargs):
         self.type = kwargs.get('type', 'image')  # sd, slider, reference
         # will be legacy
+        self.downscale: float = kwargs.get('downscale', 1.0)
         self.folder_path: str = kwargs.get('folder_path', None)
         # can be json or folder path
         self.dataset_path: str = kwargs.get('dataset_path', None)

@@ -123,9 +123,11 @@ class FileItemDTO(
         self.is_reg = self.dataset_config.is_reg
         self.prior_reg = self.dataset_config.prior_reg
         self.tensor: Union[torch.Tensor, None] = None
+        self.tensor_aug: Union[torch.Tensor, None] = None
 
     def cleanup(self):
         self.tensor = None
+        self.tensor_aug = None
         self.cleanup_latent()
         self.cleanup_text_embedding()
         self.cleanup_control()
@@ -142,7 +144,9 @@ class DataLoaderBatchDTO:
             is_latents_cached = self.file_items[0].is_latent_cached
             is_text_embedding_cached = self.file_items[0].is_text_embedding_cached
             self.tensor: Union[torch.Tensor, None] = None
+            self.tensor_aug: Union[torch.Tensor, None] = None
             self.latents: Union[torch.Tensor, None] = None
+            self.latents_aug: Union[torch.Tensor, None] = None
             self.control_tensor: Union[torch.Tensor, None] = None
             self.control_tensor_list: Union[List[List[torch.Tensor]], None] = None
             self.clip_image_tensor: Union[torch.Tensor, None] = None
@@ -157,10 +161,13 @@ class DataLoaderBatchDTO:
             if not is_latents_cached:
                 # only return a tensor if latents are not cached
                 self.tensor: torch.Tensor = torch.cat([x.tensor.unsqueeze(0) for x in self.file_items])
+                self.tensor_aug: torch.Tensor = torch.cat([x.tensor_aug.unsqueeze(0) for x in self.file_items])
             # if we have encoded latents, we concatenate them
             self.latents: Union[torch.Tensor, None] = None
+            self.latents_aug: Union[torch.Tensor, None] = None
             if is_latents_cached:
                 self.latents = torch.cat([x.get_latent().unsqueeze(0) for x in self.file_items])
+                self.latents_aug = torch.cat([x._encoded_latent_aug.unsqueeze(0) for x in self.file_items])
             self.prompt_embeds: Union[PromptEmbeds, None] = None
             # if self.file_items[0].control_tensor is not None:
             # if any have a control tensor, we concatenate them

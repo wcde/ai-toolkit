@@ -25,7 +25,6 @@ class CustomFlowMatchEulerDiscreteScheduler(FlowMatchEulerDiscreteScheduler):
         super().__init__(*args, **kwargs)
         self.init_noise_sigma = 1.0
         self.timestep_type = "linear"
-
         with torch.no_grad():
             # create weights for timesteps
             num_timesteps = 1000

@@ -1056,7 +1056,9 @@ class BaseSDTrainProcess(BaseTrainProcess):
                         imgs = reduce_contrast(imgs, self.train_config.img_multiplier)
                 if batch.latents is not None:
                     latents = batch.latents.to(self.device_torch, dtype=dtype)
+                    latents_aug = batch.latents_aug.to(self.device_torch, dtype=dtype)
                     batch.latents = latents
+                    batch.latents_aug = latents_aug
                 else:
                     # normalize to
                     if self.train_config.standardize_images:
@@ -1193,8 +1195,8 @@ class BaseSDTrainProcess(BaseTrainProcess):
                     max_noise_steps = last_idx
 
             # clip min max indicies
-            min_noise_steps = max(min_noise_steps, 0)
-            max_noise_steps = min(max_noise_steps, num_train_timesteps - 1)
+            min_noise_steps = 0 # max(min_noise_steps, 0)
+            max_noise_steps = 999 # min(max_noise_steps, num_train_timesteps - 1)
             
                     
             with self.timer('prepare_timesteps_indices'):
@@ -1334,7 +1336,9 @@ class BaseSDTrainProcess(BaseTrainProcess):
                     batch.unconditional_latents = batch.unconditional_latents * self.train_config.latent_multiplier
 
 
-                noisy_latents = self.sd.add_noise(latents, noise, timesteps)
+                noisy_latents = self.sd.add_noise(latents_aug, noise, timesteps)
+                noisy_latents_ref = self.sd.add_noise(latents, noise, timesteps)
+                noise = noise + (noisy_latents_ref - noisy_latents)
 
                 # determine scaled noise
                 # todo do we need to scale this or does it always predict full intensity
