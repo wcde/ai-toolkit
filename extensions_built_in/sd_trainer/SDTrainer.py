@@ -55,11 +55,11 @@ def fft_loss_rand(pred, target, alpha):
     diff = fft_pred - fft_target 
     return diff.real ** 2 + diff.imag ** 2
 
-def fft_loss(pred, target, alpha):
+def fft_loss(pred, target, alpha, a, b):
     fft_pred = dfrft(pred.float(), alpha)
     fft_target = dfrft(target.float(), alpha)
     diff = fft_pred - fft_target 
-    return diff.real ** 2 + diff.imag ** 2
+    return diff.real ** 2 / float(a) + diff.imag ** 2 / float(b)
 
 def flush():
     torch.cuda.empty_cache()
@@ -780,7 +780,8 @@ class SDTrainer(BaseSDTrainProcess):
             if self.train_config.loss_type == "mae":
                 loss = torch.nn.functional.l1_loss(pred.float(), target.float(), reduction="none")
             elif self.train_config.loss_type == "fft":
-                loss = fft_loss(pred, target, 1.0)
+                denoised_latents = -noise_pred * (timesteps / 1000) + noisy_latents
+                loss = fft_loss(denoised_latents, batch.latents, 1.0, self.train_config.fft_args[0], self.train_config.fft_args[1])
             elif self.train_config.loss_type == "fft_rand":
                 loss = fft_loss_rand(pred, target, 1.0)
             elif self.train_config.loss_type == "wavelet":
@@ -1052,6 +1053,7 @@ class SDTrainer(BaseSDTrainProcess):
         if loss.item() > 1e3:
             pass
         self.accelerator.backward(loss)
+        self.accelerator.clip_grad_norm_(self.params, 1.0)
         return pure_loss
 
 

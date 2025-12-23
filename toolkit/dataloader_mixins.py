@@ -1769,7 +1769,7 @@ class LatentCachingMixin:
 
                 latent_path = file_item.get_latent_path(recalculate=True)
                 # check if it is saved to disk already
-                if os.path.exists(latent_path):
+                if False: #os.path.exists(latent_path):
                     if to_memory:
                         # load it into memory
                         state_dict = load_file(latent_path, device='cpu')

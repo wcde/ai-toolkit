@@ -331,8 +331,8 @@ class ZImageModel(BaseModel):
         latent_model_input = latent_model_input.unsqueeze(2)
         latent_model_input_list = list(latent_model_input.unbind(dim=0))
 
-        timestep_model_input = (1000 - timestep) / 1000
-
+        timestep_model_input = (1000 - timestep) / 1000 * self.model_config.max_sigma
+        
         model_out_list = self.transformer(
             latent_model_input_list,
             timestep_model_input,
@@ -350,10 +350,14 @@ class ZImageModel(BaseModel):
         if self.pipeline.text_encoder.device != self.device_torch:
             self.pipeline.text_encoder.to(self.device_torch)
 
+        system_prompt = "You are an assistant designed to generate high-quality images with the "\
+            "highest degree of image-text alignment based on textual prompts."
+        # prompt = f'{system_prompt} <Prompt Start> {prompt}'
+        # prompt = f'<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n'
         prompt_embeds, _ = self.pipeline.encode_prompt(
             prompt,
             do_classifier_free_guidance=False,
-            device=self.device_torch,
+            device=self.device_torch
         )
         pe = PromptEmbeds([prompt_embeds, None])
         return pe

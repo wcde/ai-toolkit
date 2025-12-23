@@ -1335,10 +1335,29 @@ class BaseSDTrainProcess(BaseTrainProcess):
                 if batch.unconditional_latents is not None:
                     batch.unconditional_latents = batch.unconditional_latents * self.train_config.latent_multiplier
 
-
-                noisy_latents = self.sd.add_noise(latents_aug, noise, timesteps)
-                noisy_latents_ref = self.sd.add_noise(latents, noise, timesteps)
-                noise = noise + (noisy_latents_ref - noisy_latents)
+                t_01 = (timesteps / 1000).to(latents_aug.device)
+                if self.train_config.downscale_ts == "normal":
+                    ds = self.train_config.downscale * float(timesteps / 1000)
+                elif self.train_config.downscale_ts == "reverse":
+                    ds = self.train_config.downscale * ((1000 - float(timesteps)) / 1000)
+                else:
+                    ds = self.train_config.downscale
+                lat = latents_aug * ds + (1.0 - ds) * latents
+                noisy_latents = (1.0 - t_01) * lat + t_01 * noise if t_01 < self.train_config.max_sigma else t_01 * noise
+                
+                # noisy_latents = self.sd.add_noise(latents_aug, noise, timesteps)
+                if not isinstance(self.train_config.downscale, list) and self.train_config.downscale > 10.0:
+                    if isinstance(self.train_config.downscale, list):
+                        self.train_config.downscale = random.uniform(self.train_config.downscale[0], self.train_config.downscale[1])
+                    
+                    noisy_latents_ref = (1.0 - t_01) * latents + t_01 * noise if t_01 < self.train_config.max_sigma else t_01 * noise
+                    # noisy_latents_ref = self.sd.add_noise(latents, noise, timesteps)
+                    diff_aug = (noisy_latents_ref - noisy_latents) * self.train_config.downscale
+                    if self.train_config.downscale_ts == "normal":
+                        diff_aug = diff_aug * float(timesteps / 1000)
+                    elif self.train_config.downscale_ts == "reverse":
+                        diff_aug = diff_aug * ((1000 - float(timesteps)) / 1000)
+                    noise = noise + diff_aug
 
                 # determine scaled noise
                 # todo do we need to scale this or does it always predict full intensity

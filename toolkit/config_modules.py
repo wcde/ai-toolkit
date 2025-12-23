@@ -343,6 +343,10 @@ LossTarget = Literal['noise', 'source', 'unaugmented', 'differential_noise']
 
 class TrainConfig:
     def __init__(self, **kwargs):
+        self.downscale = kwargs.get('downscale', 0.0)
+        self.max_sigma = kwargs.get('max_sigma', None)
+        self.fft_args = kwargs.get('fft_args', None)
+        self.downscale_ts = kwargs.get('downscale_ts', "none")
         self.noise_scheduler = kwargs.get('noise_scheduler', 'ddpm')
         self.content_or_style: ContentOrStyleType = kwargs.get('content_or_style', 'balanced')
         self.content_or_style_reg: ContentOrStyleType = kwargs.get('content_or_style', 'balanced')
@@ -559,6 +563,7 @@ ModelArch = Literal['sd1', 'sd2', 'sd3', 'sdxl', 'pixart', 'pixart_sigma', 'aura
 class ModelConfig:
     def __init__(self, **kwargs):
         self.name_or_path: str = kwargs.get('name_or_path', None)
+        self.max_sigma = kwargs.get('max_sigma', None)
         # name or path is updated on fine tuning. Keep a copy of the original
         self.name_or_path_original: str = self.name_or_path
         self.is_v2: bool = kwargs.get('is_v2', False)
